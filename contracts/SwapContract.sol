@@ -11,4 +11,10 @@ contract SwapContract {
     fromToken = _fromToken;
     toToken = _toToken;
   }
+
+  function provide(uint256 _amount) public {
+    address from = msg.sender;
+    fromToken.transferFrom(from, address(this), _amount);
+    availableBalancesForSwap[from] += _amount;
+  }
 }

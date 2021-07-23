@@ -1,7 +1,8 @@
+// SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "./ERC20MintableForTest.sol";
 
-contract TokenA is ERC20 {
-  constructor () ERC20("TokenA", "TKA") {}
+contract TokenA is ERC20MintableForTest {
+  constructor() ERC20MintableForTest("TokenA", "TKA") {}
 }
