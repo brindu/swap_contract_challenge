@@ -85,4 +85,43 @@ contract("SwapContract", accounts => {
       });
     });
   });
+
+  describe("swap()", () => {
+    context("when the account hasn't made any deposit to the contract", () => {
+      it("reverts the transaction", async () => {
+        await expectRevert(
+          swapContract.swap({from: account}),
+          'SwapContract: empty balance make a deposit first'
+        );
+      });
+    });
+
+    context("when the account has made deposits", () => {
+      const depositValue = new BN('100');
+      const mintValue = new BN('1000');
+
+      beforeEach(async () => {
+        await fromToken.mintSupplyFor(account, mintValue);
+        await fromToken.increaseAllowance(swapContract.address, mintValue, {from: account})
+        await swapContract.provide(depositValue, {from: account});
+      });
+
+      it("swaps the two tokens", async () => {
+        await swapContract.swap({from: account});
+        const toTokenBalance = await swapContract.balanceOfToToken(account);
+
+        expect(await swapContract.balanceOfFromToken(account)).to.be.bignumber.equal(new BN('0'));
+        expect(toTokenBalance).to.be.bignumber.equal(depositValue);
+      });
+
+      it("still allows deposits of fromToken after", async () => {
+        await swapContract.swap({from: account});
+        let newDeposit = new BN('200');
+        await swapContract.provide(newDeposit, {from: account }) ;
+
+        expect(await swapContract.balanceOfFromToken(account)).to.be.bignumber.equal(newDeposit);
+        expect(await swapContract.balanceOfToToken(account)).to.be.bignumber.equal(depositValue);
+      });
+    });
+  });
 });
