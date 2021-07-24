@@ -29,6 +29,16 @@ contract SwapContract {
     availableBalancesForSwap[msg.sender] = 0;
   }
 
+  function withdraw() public {
+    require(
+      balanceOfToToken(msg.sender) > 0,
+      'SwapContract: empty balance do a swap first'
+    );
+    uint256 amount = availableBalancesForWithdraw[msg.sender];
+    toToken.transfer(msg.sender, amount);
+    availableBalancesForWithdraw[msg.sender] = 0;
+  }
+
   // Internal state getters, particularly usefull for tests
   function balanceOfFromToken(address _account) public view returns(uint256) {
     return availableBalancesForSwap[_account];

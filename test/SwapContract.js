@@ -114,13 +114,54 @@ contract("SwapContract", accounts => {
         expect(toTokenBalance).to.be.bignumber.equal(depositValue);
       });
 
-      it("still allows deposits of fromToken after", async () => {
+      it("adds up multiple swaps", async () => {
         await swapContract.swap({from: account});
-        let newDeposit = new BN('200');
-        await swapContract.provide(newDeposit, {from: account }) ;
+        let anotherDeposit = new BN('200');
+        await swapContract.provide(anotherDeposit, {from: account});
+        await swapContract.swap({from: account});
 
-        expect(await swapContract.balanceOfFromToken(account)).to.be.bignumber.equal(newDeposit);
-        expect(await swapContract.balanceOfToToken(account)).to.be.bignumber.equal(depositValue);
+        expect(await swapContract.balanceOfFromToken(account)).to.be.bignumber.equal(new BN('0'));
+        expect(await swapContract.balanceOfToToken(account)).to.be.bignumber.equal(depositValue.add(anotherDeposit));
+      });
+    });
+  });
+
+  describe("withdraw()", () => {
+    context("when the account hasn't performed any swap and has no token to withdraw", () => {
+      it("reverts the transaction", async () => {
+        await expectRevert(
+          swapContract.withdraw({from: account}),
+          'SwapContract: empty balance do a swap first'
+        );
+      });
+    });
+
+    context("when the account has performed a swap and has tokens to withdraw", () => {
+      const mintedValue = new BN('1000');
+      const swapedValue = new BN('100');
+
+      beforeEach(async () => {
+        await fromToken.mintSupplyFor(account, mintedValue);
+        await fromToken.increaseAllowance(swapContract.address, mintedValue, {from: account})
+        await swapContract.provide(swapedValue, {from: account});
+        await swapContract.swap({from: account});
+      });
+
+      it("withdraws the entire balance into the account", async () => {
+        const swapContractToTokenInitialBalance = await toToken.balanceOf(swapContract.address);
+        await swapContract.withdraw({from: account});
+
+        expect(await toToken.balanceOf(account)).to.be.bignumber.equal(swapedValue);
+        expect(await toToken.balanceOf(swapContract.address)).to.be.bignumber.equal(swapContractToTokenInitialBalance.sub(swapedValue));
+        expect(await swapContract.balanceOfToToken(account)).to.be.bignumber.equal(new BN('0'));
+      });
+
+      it("has no effect on provided tokens balance", async () => {
+        const providedTokens = new BN('200');
+        await swapContract.provide(providedTokens, {from: account});
+        await swapContract.withdraw({from: account});
+
+        expect(await swapContract.balanceOfFromToken(account)).to.be.bignumber.equal(providedTokens);
       });
     });
   });
